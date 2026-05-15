@@ -7,7 +7,7 @@ import { login as spotifyLogin, handleCallback, isLoggedIn as isSpotifyLoggedIn,
 import { fetchPlaylistTracks as fetchSpotifyTracks, fetchMyPlaylists as fetchSpotifyPlaylists } from './spotify/api.js';
 import { login as appleLogin, logout as appleLogout, isLoggedIn as isAppleLoggedIn, initMusicKit } from './apple/auth.js';
 import { fetchMyPlaylists as fetchApplePlaylists, fetchPlaylistTracks as fetchAppleTracks } from './apple/api.js';
-import { searchYouTube } from './youtube/api.js';
+import { searchYouTube, getSavedApiKey, setSavedApiKey } from './youtube/api.js';
 
 import progressBarStars from '../assets/progress_bar_stars.png';
 import star from '../assets/star.png';
@@ -86,6 +86,7 @@ export default function App() {
   const [youtubeQuery, setYoutubeQuery] = useState('');
   const [youtubeResults, setYoutubeResults] = useState([]);
   const [searchingYoutube, setSearchingYoutube] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState(getSavedApiKey());
 
   const local = useAudioPlayer(shuffle);
   const streaming = useSpotifyPlayer(streamTracks, shuffle);
@@ -556,6 +557,36 @@ export default function App() {
 
             {musicService === 'youtube' && (
               <div className="youtube-search-container">
+                <div className="settings-label">YouTube API Key</div>
+                <div className="youtube-api-input-row">
+                  <input
+                    type="password"
+                    className="youtube-search-input"
+                    placeholder="Enter your API Key..."
+                    value={customApiKey}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomApiKey(val);
+                      setSavedApiKey(val);
+                    }}
+                  />
+                  {customApiKey && (
+                    <button 
+                      className="settings-theme-btn" 
+                      onClick={() => {
+                        setCustomApiKey('');
+                        setSavedApiKey('');
+                      }}
+                      style={{ marginLeft: '4px' }}
+                    >
+                      reset
+                    </button>
+                  )}
+                </div>
+                <div style={{ fontSize: '9px', opacity: 0.6, marginBottom: '8px', fontStyle: 'italic' }}>
+                  * Kosongkan untuk menggunakan kunci bawaan.
+                </div>
+
                 <form onSubmit={handleYoutubeSearch} className="youtube-search-form">
                   <input
                     type="text"

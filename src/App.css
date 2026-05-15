@@ -544,21 +544,28 @@
   padding-right: 4px;
 }
 
+.youtube-api-input-row {
+  display: flex;
+  gap: calc(4 / 306 * 100vw);
+  margin-bottom: calc(4 / 306 * 100vw);
+}
+
 .youtube-search-form {
   display: flex;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: calc(4 / 306 * 100vw);
+  margin-bottom: calc(8 / 306 * 100vw);
 }
 
 .youtube-search-input {
   flex: 1;
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--accent);
-  color: var(--text);
-  padding: 4px 8px;
-  font-family: inherit;
-  font-size: 12px;
+  border: calc(1 / 306 * 100vw) solid var(--color-panel-text);
+  color: var(--color-panel-text);
+  padding: calc(4 / 306 * 100vw) calc(8 / 306 * 100vw);
+  font-family: 'Rainyhearts', monospace;
+  font-size: calc(10 / 306 * 100vw);
   outline: none;
+  border-radius: calc(2 / 306 * 100vw);
 }
 
 .youtube-result-info {

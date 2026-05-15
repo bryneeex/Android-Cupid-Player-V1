@@ -14,6 +14,9 @@
     "package": "vite build && electron-builder"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "dotenv": "^17.4.2",
     "jsonwebtoken": "^9.0.3",
     "music-metadata": "^11.12.3",

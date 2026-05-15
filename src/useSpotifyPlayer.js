@@ -40,7 +40,27 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
 
     async function loadStream() {
       try {
-        const url = await window.cupid.getStreamUrl(t.title, t.artist, t.id || t.videoId);
+        let url;
+        const videoId = t.id || t.videoId;
+        
+        // 1. Try local Electron process if available
+        if (window.cupid && window.cupid.getStreamUrl) {
+          url = await window.cupid.getStreamUrl(t.title, t.artist, videoId);
+        } else {
+          // 2. Fallback to Backend Server (for Android/Capacitor)
+          const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+          const query = new URLSearchParams({
+            id: videoId || '',
+            title: t.title,
+            artist: t.artist
+          }).toString();
+          
+          const resp = await fetch(`${BACKEND_URL}/get-stream?${query}`);
+          if (!resp.ok) throw new Error('Backend server failed to fetch stream');
+          const data = await resp.json();
+          url = data.url;
+        }
+
         if (cancelled) return;
         audio.src = url;
         audio.load();
@@ -48,7 +68,7 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
           audio.play().catch(() => {});
         }
       } catch (err) {
-        console.error('[yt-dlp] Failed to get stream:', err.message);
+        console.error('[Streaming] Failed to get stream:', err.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -65,8 +85,18 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
     const nextIdx = (trackIndex + 1) % tracks.length;
     const nextTrack = tracks[nextIdx];
     if (nextTrack) {
-      // Fire and forget — just warms the cache in main process
-      window.cupid.getStreamUrl(nextTrack.title, nextTrack.artist, nextTrack.id || nextTrack.videoId).catch(() => {});
+      const videoId = nextTrack.id || nextTrack.videoId;
+      if (window.cupid && window.cupid.getStreamUrl) {
+        window.cupid.getStreamUrl(nextTrack.title, nextTrack.artist, videoId).catch(() => {});
+      } else {
+        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+        const query = new URLSearchParams({
+          id: videoId || '',
+          title: nextTrack.title,
+          artist: nextTrack.artist
+        }).toString();
+        fetch(`${BACKEND_URL}/get-stream?${query}`).catch(() => {});
+      }
     }
   }, [trackIndex, tracks]);
 

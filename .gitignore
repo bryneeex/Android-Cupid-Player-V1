@@ -2,6 +2,7 @@
 *.p8
 .env
 node_modules/
+server/node_modules/
 dist/
 dist-electron/
 out/

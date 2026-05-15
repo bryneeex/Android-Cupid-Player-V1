@@ -1,10 +1,14 @@
-const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+const getApiKey = () => {
+  return localStorage.getItem('youtube_api_key') || import.meta.env.VITE_YOUTUBE_API_KEY;
+};
+
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
 export async function searchYouTube(query) {
-  if (!API_KEY) throw new Error('YouTube API Key is missing');
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('YouTube API Key is missing');
 
-  const url = `${BASE_URL}/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=10&key=${API_KEY}`;
+  const url = `${BASE_URL}/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=10&key=${apiKey}`;
 
   const res = await fetch(url);
   if (!res.ok) {
@@ -21,4 +25,16 @@ export async function searchYouTube(query) {
     // For yt-dlp to work seamlessly with the current backend:
     id: item.id.videoId
   }));
+}
+
+export function setSavedApiKey(key) {
+  if (key) {
+    localStorage.setItem('youtube_api_key', key);
+  } else {
+    localStorage.removeItem('youtube_api_key');
+  }
+}
+
+export function getSavedApiKey() {
+  return localStorage.getItem('youtube_api_key') || '';
 }
