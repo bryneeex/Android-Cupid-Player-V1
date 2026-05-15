@@ -3,45 +3,64 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 7860;
 
+const INVIDIOUS_INSTANCES = [
+    'https://inv.tux.pizza',
+    'https://invidious.flokinet.to',
+    'https://yewtu.be',
+    'https://inv.vern.cc',
+    'https://invidious.nerdvpn.de'
+];
+
 app.use(cors());
 
 app.get('/', (req, res) => {
-    res.send('Cupid Player Backend is Online (Cobalt Engine) 🎵');
+    res.send('Cupid Player Backend (Invidious Mode) 🎵');
 });
+
+async function tryInvidious(videoId) {
+    for (const instance of INVIDIOUS_INSTANCES) {
+        try {
+            console.log(`[Invidious] Trying ${instance}`);
+            const resp = await fetch(`${instance}/api/v1/videos/${videoId}`, { signal: AbortSignal.timeout(5000) });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.formatStreams && data.formatStreams.length > 0) {
+                    // Ambil stream dengan kualitas audio terbaik atau mpeg4
+                    const stream = data.formatStreams.find(s => s.container === 'm4a') || data.formatStreams[0];
+                    return stream.url;
+                }
+            }
+        } catch (err) {
+            console.error(`[Invidious Error] ${instance} failed: ${err.message}`);
+        }
+    }
+    return null;
+}
 
 app.get('/stream', async (req, res) => {
     const { id, title, artist } = req.query;
     let videoId = id;
 
     try {
-        // Jika tidak ada ID, kita tidak bisa lanjut ke Cobalt (Cobalt butuh URL pasti)
-        if (!videoId) return res.status(400).send("Video ID is required for Cobalt engine");
+        if (!videoId) {
+            // Search logic if ID is missing
+            const searchInstance = INVIDIOUS_INSTANCES[0];
+            const searchResp = await fetch(`${searchInstance}/api/v1/search?q=${encodeURIComponent(title + ' ' + artist)}&type=video`);
+            const searchData = await searchResp.json();
+            if (searchData && searchData.length > 0) {
+                videoId = searchData[0].videoId;
+            }
+        }
 
-        console.log(`[Cobalt] Requesting stream for ${videoId}`);
+        if (!videoId) return res.status(404).send("Video not found");
 
-        const response = await fetch('https://api.cobalt.tools/api/json', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                url: `https://www.youtube.com/watch?v=${videoId}`,
-                downloadMode: 'audio',
-                audioFormat: 'mp3',
-                audioBitrate: '128'
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.status === 'redirect' || data.status === 'stream' || data.url) {
-            const streamUrl = data.url;
-            console.log(`[Success] Redirecting to Cobalt stream`);
+        const streamUrl = await tryInvidious(videoId);
+        
+        if (streamUrl) {
+            console.log(`[Success] Streaming ${videoId}`);
             res.redirect(streamUrl);
         } else {
-            console.error('[Cobalt Error]', data);
-            res.status(404).send("Cobalt could not find the stream");
+            res.status(404).send("All Invidious instances failed to provide a stream");
         }
     } catch (err) {
         console.error('[Global Error]', err.message);
@@ -49,10 +68,6 @@ app.get('/stream', async (req, res) => {
     }
 });
 
-app.get('/health', (req, res) => {
-    res.send('Cupid Server is healthy');
-});
-
 app.listen(port, () => {
-    console.log(`Cupid Server running on port ${port} (Cobalt Engine)`);
+    console.log(`Cupid Server running on port ${port} (Invidious Mode)`);
 });

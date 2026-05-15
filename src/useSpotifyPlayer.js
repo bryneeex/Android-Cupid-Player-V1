@@ -1,12 +1,3 @@
-/**
- * React hook for Spotify playback via yt-dlp audio streams.
- *
- * Uses Spotify API for metadata/playlists, then fetches audio
- * from YouTube via yt-dlp in the main process. Plays via HTML5 Audio.
- *
- * Exposes the same interface as useAudioPlayer.
- */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function useSpotifyPlayer(tracks, shuffle = false) {
@@ -29,7 +20,6 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
     uri: null,
   };
 
-  // ── Load track via yt-dlp when index or tracks change ─────
   useEffect(() => {
     if (tracks.length === 0) return;
     const t = tracks[trackIndex];
@@ -43,12 +33,11 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
         let url;
         const videoId = t.id || t.videoId;
         
-        // 1. Try local Electron process if available
         if (window.cupid && window.cupid.getStreamUrl) {
           url = await window.cupid.getStreamUrl(t.title, t.artist, videoId);
         } else {
-          // 2. Fallback to Backend Proxy Server (for Android/Capacitor)
           const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+          // Use the proxy-direct /stream endpoint
           url = `${BACKEND_URL}/stream?id=${videoId || ''}&title=${encodeURIComponent(t.title)}&artist=${encodeURIComponent(t.artist)}`;
         }
 
@@ -66,29 +55,9 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
     }
 
     loadStream();
-
     return () => { cancelled = true; };
   }, [trackIndex, tracks]);
 
-  // ── Prefetch next track ───────────────────────────────────
-  useEffect(() => {
-    if (tracks.length === 0) return;
-    const nextIdx = (trackIndex + 1) % tracks.length;
-    const nextTrack = tracks[nextIdx];
-    if (nextTrack) {
-      const videoId = nextTrack.id || nextTrack.videoId;
-      if (window.cupid && window.cupid.getStreamUrl) {
-        window.cupid.getStreamUrl(nextTrack.title, nextTrack.artist, videoId).catch(() => {});
-      } else {
-        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-        const url = `${BACKEND_URL}/stream?id=${videoId || ''}&title=${encodeURIComponent(nextTrack.title)}&artist=${encodeURIComponent(nextTrack.artist)}`;
-        // Pre-warm the cache by fetching the first few bytes
-        fetch(url, { headers: { Range: 'bytes=0-1' } }).catch(() => {});
-      }
-    }
-  }, [trackIndex, tracks]);
-
-  // ── Audio event listeners ─────────────────────────────────
   useEffect(() => {
     const onTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
@@ -96,26 +65,14 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
         setProgress(audio.currentTime / audio.duration);
       }
     };
-
     const onLoadedMetadata = () => {
       setDuration(audio.duration);
     };
-
     const onEnded = () => {
-      setTrackIndex((prev) => {
-        if (shuffleRef.current && tracks.length > 1) {
-          let next;
-          do { next = Math.floor(Math.random() * tracks.length); } while (next === prev);
-          return next;
-        }
-        return (prev + 1) % tracks.length;
-      });
+      setTrackIndex((prev) => (prev + 1) % tracks.length);
     };
-
     const onError = () => {
       console.error('[Audio Error]', audio.error);
-      const msg = audio.error ? `Code ${audio.error.code}: ${audio.error.message}` : 'Unknown error';
-      alert(`Audio Error: ${msg}`);
     };
 
     audio.addEventListener('timeupdate', onTimeUpdate);
@@ -131,8 +88,6 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
     };
   }, [tracks.length]);
 
-  // ── Playback controls ────────────────────────────────────
-
   const togglePlay = useCallback(() => {
     if (isPlaying) {
       audio.pause();
@@ -144,14 +99,7 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
   }, [isPlaying]);
 
   const next = useCallback(() => {
-    setTrackIndex((prev) => {
-      if (shuffleRef.current && tracks.length > 1) {
-        let n;
-        do { n = Math.floor(Math.random() * tracks.length); } while (n === prev);
-        return n;
-      }
-      return (prev + 1) % tracks.length;
-    });
+    setTrackIndex((prev) => (prev + 1) % tracks.length);
     setIsPlaying(true);
   }, [tracks.length]);
 
@@ -182,6 +130,6 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
     prev,
     seek,
     loading,
-    setIsPlaying, // Export this so we can force play
+    setIsPlaying,
   };
 }

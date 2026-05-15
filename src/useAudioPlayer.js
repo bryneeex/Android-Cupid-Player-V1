@@ -120,5 +120,6 @@ export default function useAudioPlayer(shuffle = false) {
     next,
     prev,
     seek,
+    setIsPlaying
   };
 }
