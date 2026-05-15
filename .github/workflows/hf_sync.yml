@@ -17,4 +17,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git push --force https://bryneeex:$HF_TOKEN@huggingface.co/spaces/bryneeex/Cupid-Player-Api main
+          git push --force https://centyy:$HF_TOKEN@huggingface.co/spaces/centyy/Cupid-Player-Api main
