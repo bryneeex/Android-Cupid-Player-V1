@@ -6,6 +6,10 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 
+app.get('/', (req, res) => {
+    res.send('Cupid Player Backend is Online! 🎵');
+});
+
 app.get('/get-stream', (req, res) => {
     const videoId = req.query.id;
     const title = req.query.title;
