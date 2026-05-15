@@ -15,7 +15,7 @@ app.get('/stream', (req, res) => {
     const { id, title, artist } = req.query;
     const query = id ? `https://www.youtube.com/watch?v=${id}` : `ytsearch1:"${title} ${artist}"`;
 
-    console.log(`[Streaming] ${query}`);
+    console.log(`[Streaming Start] ${query}`);
     
     res.setHeader('Content-Type', 'audio/mpeg');
     
@@ -25,6 +25,7 @@ app.get('/stream', (req, res) => {
         '-f', 'bestaudio',
         '--no-playlist',
         '--no-warnings',
+        '--no-cache-dir',
         query
     ]);
 
@@ -40,16 +41,15 @@ app.get('/stream', (req, res) => {
     yt.stdout.pipe(ffmpeg.stdin);
     ffmpeg.stdout.pipe(res);
 
-    yt.stderr.on('data', (data) => {
-        console.error(`[yt-dlp error] ${data}`);
-    });
+    yt.on('error', (err) => console.error('[yt-dlp Spawn Error]', err));
+    ffmpeg.on('error', (err) => console.error('[ffmpeg Spawn Error]', err));
 
-    ffmpeg.stderr.on('data', (data) => {
-        // Logging ffmpeg stderr can be noisy, but useful for debugging
-        // console.error(`[ffmpeg error] ${data}`);
+    yt.stderr.on('data', (data) => {
+        console.error(`[yt-dlp stderr] ${data}`);
     });
 
     req.on('close', () => {
+        console.log(`[Streaming Ended] ${query}`);
         yt.kill();
         ffmpeg.kill();
     });

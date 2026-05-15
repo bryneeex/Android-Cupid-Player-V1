@@ -112,14 +112,22 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
       });
     };
 
+    const onError = () => {
+      console.error('[Audio Error]', audio.error);
+      const msg = audio.error ? `Code ${audio.error.code}: ${audio.error.message}` : 'Unknown error';
+      alert(`Audio Error: ${msg}`);
+    };
+
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
     audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
     };
   }, [tracks.length]);
 
