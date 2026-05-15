@@ -3,66 +3,45 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 7860;
 
-const PIPED_INSTANCES = [
-    'https://pipedapi.kavin.rocks',
-    'https://pipedapi.moomoo.me',
-    'https://api-piped.mha.fi',
-    'https://pipedapi.rivo.gg',
-    'https://pipedapi.aeong.one'
-];
-
 app.use(cors());
 
 app.get('/', (req, res) => {
-    res.send('Cupid Player Backend is Online (Multi-Instance Mode) 🎵');
+    res.send('Cupid Player Backend is Online (Cobalt Engine) 🎵');
 });
-
-// Fungsi untuk mencoba fetch dari berbagai instance Piped
-async function tryFetch(endpoint) {
-    for (const instance of PIPED_INSTANCES) {
-        try {
-            console.log(`[Piped] Trying ${instance}${endpoint}`);
-            const resp = await fetch(`${instance}${endpoint}`, { signal: AbortSignal.timeout(5000) });
-            if (resp.ok) {
-                const data = await resp.json();
-                return data;
-            }
-        } catch (err) {
-            console.error(`[Piped Error] ${instance} failed: ${err.message}`);
-        }
-    }
-    return null;
-}
 
 app.get('/stream', async (req, res) => {
     const { id, title, artist } = req.query;
     let videoId = id;
 
     try {
-        // 1. Jika tidak ada ID, cari ID-nya dulu
-        if (!videoId) {
-            const searchData = await tryFetch(`/search?q=${encodeURIComponent(title + ' ' + artist)}&filter=videos`);
-            if (searchData && searchData.items && searchData.items.length > 0) {
-                videoId = searchData.items[0].url.split('v=')[1];
-            }
-        }
+        // Jika tidak ada ID, kita tidak bisa lanjut ke Cobalt (Cobalt butuh URL pasti)
+        if (!videoId) return res.status(400).send("Video ID is required for Cobalt engine");
 
-        if (!videoId) return res.status(404).send("Video not found");
+        console.log(`[Cobalt] Requesting stream for ${videoId}`);
 
-        // 2. Ambil data stream
-        const streamData = await tryFetch(`/streams/${videoId}`);
-        if (!streamData || !streamData.audioStreams) {
-            return res.status(404).send("Stream data not available");
-        }
+        const response = await fetch('https://api.cobalt.tools/api/json', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: `https://www.youtube.com/watch?v=${videoId}`,
+                downloadMode: 'audio',
+                audioFormat: 'mp3',
+                audioBitrate: '128'
+            })
+        });
 
-        // 3. Cari audio terbaik
-        const audioStream = streamData.audioStreams.sort((a, b) => b.bitrate - a.bitrate)[0];
-        
-        if (audioStream && audioStream.url) {
-            console.log(`[Success] Streaming video ${videoId}`);
-            res.redirect(audioStream.url);
+        const data = await response.json();
+
+        if (data.status === 'redirect' || data.status === 'stream' || data.url) {
+            const streamUrl = data.url;
+            console.log(`[Success] Redirecting to Cobalt stream`);
+            res.redirect(streamUrl);
         } else {
-            res.status(404).send("Audio URL not found");
+            console.error('[Cobalt Error]', data);
+            res.status(404).send("Cobalt could not find the stream");
         }
     } catch (err) {
         console.error('[Global Error]', err.message);
@@ -75,5 +54,5 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Cupid Server running on port ${port} (Multi-Instance)`);
+    console.log(`Cupid Server running on port ${port} (Cobalt Engine)`);
 });
