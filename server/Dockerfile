@@ -15,12 +15,12 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o 
 # Set working directory
 WORKDIR /app
 
-# Copy package.json from server folder
-COPY server/package*.json ./
+# Copy package.json
+COPY package*.json ./
 RUN npm install
 
-# Copy the server source code from server folder
-COPY server/ .
+# Copy the server source code
+COPY . .
 
 # Hugging Face Spaces default port is 7860
 ENV PORT=7860
