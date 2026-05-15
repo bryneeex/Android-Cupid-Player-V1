@@ -1,5 +1,12 @@
 {
   "appId": "fardhanilmansyah.com",
   "appName": "Cupid-Player-V1",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "allowMixedContent": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
 }

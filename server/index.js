@@ -19,18 +19,17 @@ app.get('/get-stream', (req, res) => {
         return res.status(400).json({ error: 'Missing search parameters' });
     }
 
-    // Prefer videoId if available
     const query = videoId ? `https://www.youtube.com/watch?v=${videoId}` : `ytsearch1:"${title} ${artist}"`;
-    
-    // Command to get stream URL
-    const cmd = `yt-dlp -g -f "bestaudio[ext=m4a]/bestaudio" --no-playlist --no-warnings "${query}"`;
 
-    exec(cmd, (error, stdout, stderr) => {
+    // Optimized command for faster URL extraction
+    const cmd = `yt-dlp -g -f "bestaudio" --no-playlist --no-warnings --quiet --no-check-certificate "${query}"`;
+
+    exec(cmd, { timeout: 10000 }, (error, stdout, stderr) => {
         if (error) {
             console.error(`[Server Error] ${error.message}`);
             return res.status(500).json({ error: 'Failed to fetch stream URL' });
         }
-        const url = stdout.trim();
+        const url = stdout.split('\n')[0].trim();
         if (!url) {
             return res.status(404).json({ error: 'No stream URL found' });
         }
