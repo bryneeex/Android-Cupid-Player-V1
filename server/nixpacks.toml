@@ -1,0 +1,9 @@
+# Nixpacks configuration for Railway to install yt-dlp automatically
+[phases.setup]
+nixPkgs = ["nodejs", "python3", "yt-dlp"]
+
+[phases.build]
+cmds = ["npm install"]
+
+[start]
+cmd = "node index.js"
