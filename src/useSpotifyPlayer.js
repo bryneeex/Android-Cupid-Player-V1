@@ -47,18 +47,9 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
         if (window.cupid && window.cupid.getStreamUrl) {
           url = await window.cupid.getStreamUrl(t.title, t.artist, videoId);
         } else {
-          // 2. Fallback to Backend Server (for Android/Capacitor)
+          // 2. Fallback to Backend Proxy Server (for Android/Capacitor)
           const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-          const query = new URLSearchParams({
-            id: videoId || '',
-            title: t.title,
-            artist: t.artist
-          }).toString();
-          
-          const resp = await fetch(`${BACKEND_URL}/get-stream?${query}`);
-          if (!resp.ok) throw new Error('Backend server failed to fetch stream');
-          const data = await resp.json();
-          url = data.url;
+          url = `${BACKEND_URL}/stream?id=${videoId || ''}&title=${encodeURIComponent(t.title)}&artist=${encodeURIComponent(t.artist)}`;
         }
 
         if (cancelled) return;
@@ -90,12 +81,9 @@ export default function useSpotifyPlayer(tracks, shuffle = false) {
         window.cupid.getStreamUrl(nextTrack.title, nextTrack.artist, videoId).catch(() => {});
       } else {
         const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-        const query = new URLSearchParams({
-          id: videoId || '',
-          title: nextTrack.title,
-          artist: nextTrack.artist
-        }).toString();
-        fetch(`${BACKEND_URL}/get-stream?${query}`).catch(() => {});
+        const url = `${BACKEND_URL}/stream?id=${videoId || ''}&title=${encodeURIComponent(nextTrack.title)}&artist=${encodeURIComponent(nextTrack.artist)}`;
+        // Pre-warm the cache by fetching the first few bytes
+        fetch(url, { headers: { Range: 'bytes=0-1' } }).catch(() => {});
       }
     }
   }, [trackIndex, tracks]);

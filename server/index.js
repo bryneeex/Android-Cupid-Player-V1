@@ -1,5 +1,5 @@
 const express = require('express');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -8,6 +8,34 @@ app.use(cors());
 
 app.get('/', (req, res) => {
     res.send('Cupid Player Backend is Online! 🎵');
+});
+
+// Endpoint baru untuk menyalurkan audio langsung (Proxy)
+app.get('/stream', (req, res) => {
+    const { id, title, artist } = req.query;
+    const query = id ? `https://www.youtube.com/watch?v=${id}` : `ytsearch1:"${title} ${artist}"`;
+
+    console.log(`[Streaming] ${query}`);
+    
+    res.setHeader('Content-Type', 'audio/mpeg');
+    
+    const yt = spawn('yt-dlp', [
+        '-o', '-',
+        '-f', 'bestaudio',
+        '--no-playlist',
+        '--no-warnings',
+        query
+    ]);
+
+    yt.stdout.pipe(res);
+
+    yt.stderr.on('data', (data) => {
+        console.error(`[yt-dlp error] ${data}`);
+    });
+
+    req.on('close', () => {
+        yt.kill();
+    });
 });
 
 app.get('/get-stream', (req, res) => {
